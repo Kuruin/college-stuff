@@ -132,7 +132,7 @@ fun CalculatorApp() {
                         row.forEach { buttonText ->
                             val color = when (buttonText) {
                                 in "0".."9" -> numberColor
-                                "C", "DEL" -> actionColor
+                                "DEL" -> actionColor
                                 else -> operatorColor
                             }
                             CalculatorButton(
@@ -195,7 +195,13 @@ fun CalculatorButton(
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
-        Text(text = text, fontSize = 32.sp, color = Color.White)
+        Text(
+            text = text,
+            fontSize = if (text == "DEL") 20.sp else 32.sp,
+            color = Color.White,
+            maxLines = 1,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
