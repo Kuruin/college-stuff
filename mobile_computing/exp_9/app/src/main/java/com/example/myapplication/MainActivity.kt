@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -35,11 +36,18 @@ class MainActivity : ComponentActivity() {
 private fun evaluateExpression(expression: String): String {
     if (expression.isBlank()) return ""
     try {
+        var sanitizedExpression = expression
+        while (sanitizedExpression.isNotEmpty() && sanitizedExpression.last() in listOf('+', '-', '*', '/', '%', '.')) {
+            sanitizedExpression = sanitizedExpression.dropLast(1)
+        }
+
+        if (sanitizedExpression.isBlank()) return ""
+
         val numbers = mutableListOf<Double>()
         val operators = mutableListOf<Char>()
         var currentNumber = ""
 
-        for (char in expression) {
+        for (char in sanitizedExpression) {
             if (char.isDigit() || char == '.') {
                 currentNumber += char
             } else {
@@ -67,6 +75,7 @@ private fun evaluateExpression(expression: String): String {
                     if (nextNumber == 0.0) return "Error: Div by Zero"
                     result / nextNumber
                 }
+                '%' -> result % nextNumber
                 else -> return "Error"
             }
         }
@@ -84,6 +93,8 @@ private fun evaluateExpression(expression: String): String {
 @Composable
 fun CalculatorApp() {
     var displayText by remember { mutableStateOf("") }
+    var expressionHistory by remember { mutableStateOf("") }
+    var justEvaluated by remember { mutableStateOf(false) }
 
     val numberColor = Color(0xFF333333)
     val operatorColor = Color(0xFFFFA500)
@@ -94,15 +105,25 @@ fun CalculatorApp() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Bottom
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.End
         ) {
-            // Display
+            // Expression History Display
+            Text(
+                text = expressionHistory,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                color = Color.Gray,
+                fontSize = 24.sp,
+                textAlign = TextAlign.End,
+                maxLines = 1
+            )
+            // Main Display
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(Color.DarkGray)
+                    .padding(bottom = 32.dp)
                     .padding(horizontal = 16.dp, vertical = 24.dp)
             ) {
                 Text(
@@ -132,7 +153,7 @@ fun CalculatorApp() {
                         row.forEach { buttonText ->
                             val color = when (buttonText) {
                                 in "0".."9" -> numberColor
-                                "DEL" -> actionColor
+                                "C", "DEL" -> actionColor
                                 else -> operatorColor
                             }
                             CalculatorButton(
@@ -141,15 +162,29 @@ fun CalculatorApp() {
                                 color = color,
                                 onClick = {
                                     when (buttonText) {
-                                        "C" -> displayText = ""
+                                        "C" -> {
+                                            displayText = ""
+                                            expressionHistory = ""
+                                            justEvaluated = false
+                                        }
                                         "DEL" -> {
-                                            if (displayText.isNotEmpty()) {
+                                            if (justEvaluated) {
+                                                displayText = ""
+                                                expressionHistory = ""
+                                                justEvaluated = false
+                                            } else if (displayText.isNotEmpty()) {
                                                 displayText = displayText.dropLast(1)
                                             }
                                         }
-                                        else -> {
-                                            if (displayText == "Error") {
+                                        "+", "-", "*", "/", "%" -> {
+                                            justEvaluated = false
+                                            displayText += buttonText
+                                        }
+                                        else -> { // Numbers
+                                            if (justEvaluated) {
                                                 displayText = buttonText
+                                                expressionHistory = ""
+                                                justEvaluated = false
                                             } else {
                                                 displayText += buttonText
                                             }
@@ -164,16 +199,35 @@ fun CalculatorApp() {
                 // Last row with 0, ., and =
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CalculatorButton(text = "0", modifier = Modifier.weight(2f), color = numberColor) {
-                        if (displayText != "Error") displayText += "0"
+                    CalculatorButton(text = "0", modifier = Modifier.weight(2.1f), color = numberColor) {
+                        if (justEvaluated) {
+                            displayText = "0"
+                            expressionHistory = ""
+                            justEvaluated = false
+                        } else if (displayText != "Error") {
+                            displayText += "0"
+                        }
                     }
                     CalculatorButton(text = ".", modifier = Modifier.weight(1f), color = numberColor) {
-                        if (displayText != "Error") displayText += "."
+                        if (justEvaluated) {
+                            displayText = "."
+                            expressionHistory = ""
+                            justEvaluated = false
+                        } else if (displayText != "Error") {
+                            displayText += "."
+                        }
                     }
                     CalculatorButton(text = "=", modifier = Modifier.weight(1f), color = operatorColor) {
-                        displayText = evaluateExpression(displayText)
+                        if (displayText.isNotEmpty() && !justEvaluated) {
+                            val expressionToEvaluate = displayText
+                            val result = evaluateExpression(expressionToEvaluate)
+                            expressionHistory = expressionToEvaluate
+                            displayText = result
+                            justEvaluated = true
+                        }
                     }
                 }
             }
@@ -189,9 +243,10 @@ fun CalculatorButton(
     color: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
+    val aspectRatio = if (text == "0") 2f else 1f
     Button(
         onClick = onClick,
-        modifier = modifier.aspectRatio(if (text == "0") 2f else 1f),
+        modifier = modifier.aspectRatio(aspectRatio),
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
