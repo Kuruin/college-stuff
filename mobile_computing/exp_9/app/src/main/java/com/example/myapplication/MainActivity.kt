@@ -3,260 +3,148 @@ package com.example.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MyApplicationTheme {
-                CalculatorApp()
+                TodoApp()
             }
         }
     }
 }
 
-private fun evaluateExpression(expression: String): String {
-    if (expression.isBlank()) return ""
-    try {
-        var sanitizedExpression = expression
-        while (sanitizedExpression.isNotEmpty() && sanitizedExpression.last() in listOf('+', '-', '*', '/', '%', '.')) {
-            sanitizedExpression = sanitizedExpression.dropLast(1)
-        }
+data class TodoItem(val id: Int, val task: String, val isCompleted: Boolean = false)
 
-        if (sanitizedExpression.isBlank()) return ""
-
-        val numbers = mutableListOf<Double>()
-        val operators = mutableListOf<Char>()
-        var currentNumber = ""
-
-        for (char in sanitizedExpression) {
-            if (char.isDigit() || char == '.') {
-                currentNumber += char
-            } else {
-                if (currentNumber.isNotEmpty()) {
-                    numbers.add(currentNumber.toDouble())
-                    currentNumber = ""
-                }
-                operators.add(char)
-            }
-        }
-        if (currentNumber.isNotEmpty()) {
-            numbers.add(currentNumber.toDouble())
-        }
-
-        if (numbers.isEmpty() || (numbers.size != operators.size + 1 && operators.isNotEmpty())) return "Error"
-
-        var result = numbers.first()
-        for (i in operators.indices) {
-            val nextNumber = numbers[i + 1]
-            result = when (operators[i]) {
-                '+' -> result + nextNumber
-                '-' -> result - nextNumber
-                '*' -> result * nextNumber
-                '/' -> {
-                    if (nextNumber == 0.0) return "Error: Div by Zero"
-                    result / nextNumber
-                }
-                '%' -> result % nextNumber
-                else -> return "Error"
-            }
-        }
-
-        return if (result % 1 == 0.0) {
-            result.toLong().toString()
-        } else {
-            String.format("%.4f", result)
-        }
-    } catch (e: Exception) {
-        return "Error"
-    }
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalculatorApp() {
-    var displayText by remember { mutableStateOf("") }
-    var expressionHistory by remember { mutableStateOf("") }
-    var justEvaluated by remember { mutableStateOf(false) }
+fun TodoApp() {
+    var todos by remember { mutableStateOf(listOf<TodoItem>()) }
+    var text by remember { mutableStateOf("") }
+    var nextId by remember { mutableStateOf(0) }
+    var currentTime by remember { mutableStateOf("") }
 
-    val numberColor = Color(0xFF333333)
-    val operatorColor = Color(0xFFFFA500)
-    val actionColor = Color(0xFFA9A9A9)
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            delay(1000)
+        }
+    }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("To-Do List") }
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp)
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.End
         ) {
-            // Expression History Display
             Text(
-                text = expressionHistory,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                color = Color.Gray,
-                fontSize = 24.sp,
-                textAlign = TextAlign.End,
-                maxLines = 1
+                text = currentTime,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.align(Alignment.End)
             )
-            // Main Display
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = displayText.ifEmpty { "0" },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.White,
-                    fontSize = 48.sp,
-                    textAlign = TextAlign.End,
-                    maxLines = 2
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("New Task") },
+                    modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
+                    if (text.isNotBlank()) {
+                        todos = todos + TodoItem(id = nextId++, task = text)
+                        text = ""
+                    }
+                }) {
+                    Text("Add")
+                }
             }
-
-            // Buttons
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val buttonRows = listOf(
-                    listOf("C", "DEL", "%", "/"),
-                    listOf("7", "8", "9", "*"),
-                    listOf("4", "5", "6", "-"),
-                    listOf("1", "2", "3", "+")
-                )
-
-                buttonRows.forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        row.forEach { buttonText ->
-                            val color = when (buttonText) {
-                                in "0".."9" -> numberColor
-                                "C", "DEL" -> actionColor
-                                else -> operatorColor
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(todos, key = { it.id }) { todo ->
+                    TodoItemRow(
+                        todo = todo,
+                        onCheckedChange = { isChecked ->
+                            todos = todos.map {
+                                if (it.id == todo.id) it.copy(isCompleted = isChecked) else it
                             }
-                            CalculatorButton(
-                                text = buttonText,
-                                modifier = Modifier.weight(1f),
-                                color = color,
-                                onClick = {
-                                    when (buttonText) {
-                                        "C" -> {
-                                            displayText = ""
-                                            expressionHistory = ""
-                                            justEvaluated = false
-                                        }
-                                        "DEL" -> {
-                                            if (justEvaluated) {
-                                                displayText = ""
-                                                expressionHistory = ""
-                                                justEvaluated = false
-                                            } else if (displayText.isNotEmpty()) {
-                                                displayText = displayText.dropLast(1)
-                                            }
-                                        }
-                                        "+", "-", "*", "/", "%" -> {
-                                            justEvaluated = false
-                                            displayText += buttonText
-                                        }
-                                        else -> { // Numbers
-                                            if (justEvaluated) {
-                                                displayText = buttonText
-                                                expressionHistory = ""
-                                                justEvaluated = false
-                                            } else {
-                                                displayText += buttonText
-                                            }
-                                        }
-                                    }
-                                }
-                            )
+                        },
+                        onDelete = {
+                            todos = todos.filter { it.id != todo.id }
                         }
-                    }
-                }
-
-                // Last row with 0, ., and =
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CalculatorButton(text = "0", modifier = Modifier.weight(2.1f), color = numberColor) {
-                        if (justEvaluated) {
-                            displayText = "0"
-                            expressionHistory = ""
-                            justEvaluated = false
-                        } else if (displayText != "Error") {
-                            displayText += "0"
-                        }
-                    }
-                    CalculatorButton(text = ".", modifier = Modifier.weight(1f), color = numberColor) {
-                        if (justEvaluated) {
-                            displayText = "."
-                            expressionHistory = ""
-                            justEvaluated = false
-                        } else if (displayText != "Error") {
-                            displayText += "."
-                        }
-                    }
-                    CalculatorButton(text = "=", modifier = Modifier.weight(1f), color = operatorColor) {
-                        if (displayText.isNotEmpty() && !justEvaluated) {
-                            val expressionToEvaluate = displayText
-                            val result = evaluateExpression(expressionToEvaluate)
-                            expressionHistory = expressionToEvaluate
-                            displayText = result
-                            justEvaluated = true
-                        }
-                    }
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-fun CalculatorButton(
-    text: String,
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary,
-    onClick: () -> Unit
+fun TodoItemRow(
+    todo: TodoItem,
+    onCheckedChange: (Boolean) -> Unit,
+    onDelete: () -> Unit
 ) {
-    val aspectRatio = if (text == "0") 2f else 1f
-    Button(
-        onClick = onClick,
-        modifier = modifier.aspectRatio(aspectRatio),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(containerColor = color)
+    Card(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = text,
-            fontSize = if (text == "DEL") 20.sp else 32.sp,
-            color = Color.White,
-            maxLines = 1,
-            textAlign = TextAlign.Center
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = todo.isCompleted,
+                onCheckedChange = onCheckedChange
+            )
+            Text(
+                text = todo.task,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp, end = 8.dp),
+                style = if (todo.isCompleted) {
+                    MaterialTheme.typography.bodyLarge.copy(
+                        textDecoration = TextDecoration.LineThrough,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                }
+            )
+            IconButton(onClick = onDelete) {
+                 Text("X", color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 
@@ -264,6 +152,6 @@ fun CalculatorButton(
 @Composable
 fun DefaultPreview() {
     MyApplicationTheme {
-        CalculatorApp()
+        TodoApp()
     }
 }
