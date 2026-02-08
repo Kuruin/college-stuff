@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Bundle
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.google.android.gms.location.*
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -127,11 +129,16 @@ fun LocationScreen(requestLocation: () -> Unit, hasPermission: () -> Boolean) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 if (hasPermission()) {
-                    // Simplified for this example, in a real app, you would get the location from the callback
                     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
                     fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                         location?.let {
-                            locationText = "Lat: ${it.latitude}, Lon: ${it.longitude}"
+                            val geocoder = Geocoder(context, Locale.getDefault())
+                            val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
+                            val address = addresses?.firstOrNull()
+                            val addressText = address?.let {
+                                "${it.locality}, ${it.adminArea}, ${it.countryName}"
+                            } ?: "Address not found"
+                            locationText = "Lat: ${it.latitude}, Lon: ${it.longitude}\n$addressText"
                         }
                     }
                 } else {
