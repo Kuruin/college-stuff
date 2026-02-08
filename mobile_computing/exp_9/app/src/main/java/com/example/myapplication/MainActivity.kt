@@ -2,7 +2,9 @@ package com.example.myapplication
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Address
 import android.location.Geocoder
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -31,7 +33,7 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationCallback: LocationCallback
+    private var locationCallback: LocationCallback? = null
     private var locationRequired = false
 
     private val locationPermissionRequest = registerForActivityResult(
@@ -67,7 +69,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
     }
 
     private fun startLocationUpdates() {
@@ -96,11 +98,13 @@ class MainActivity : ComponentActivity() {
             .setMaxUpdateDelayMillis(15000)
             .build()
 
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            Looper.getMainLooper()
-        )
+        locationCallback?.let {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                it,
+                Looper.getMainLooper()
+            )
+        }
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -133,12 +137,22 @@ fun LocationScreen(requestLocation: () -> Unit, hasPermission: () -> Boolean) {
                     fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                         location?.let {
                             val geocoder = Geocoder(context, Locale.getDefault())
-                            val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
-                            val address = addresses?.firstOrNull()
-                            val addressText = address?.let {
-                                "${it.locality}, ${it.adminArea}, ${it.countryName}"
-                            } ?: "Address not found"
-                            locationText = "Lat: ${it.latitude}, Lon: ${it.longitude}\n$addressText"
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                geocoder.getFromLocation(it.latitude, it.longitude, 1) { addresses ->
+                                    val address = addresses.firstOrNull()
+                                    val addressText = address?.let {
+                                        "${it.locality}, ${it.adminArea}, ${it.countryName}"
+                                    } ?: "Address not found"
+                                    locationText = "Lat: ${it.latitude}, Lon: ${it.longitude}\n$addressText"
+                                }
+                            } else {
+                                val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
+                                val address = addresses?.firstOrNull()
+                                val addressText = address?.let {
+                                    "${it.locality}, ${it.adminArea}, ${it.countryName}"
+                                } ?: "Address not found"
+                                locationText = "Lat: ${it.latitude}, Lon: ${it.longitude}\n$addressText"
+                            }
                         }
                     }
                 } else {
