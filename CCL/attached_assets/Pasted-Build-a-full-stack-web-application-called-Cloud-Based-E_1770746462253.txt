@@ -1,0 +1,86 @@
+Build a full-stack web application called "Cloud-Based Event & Media Sharing Platform".
+
+IMPORTANT SECURITY RULE:
+- This is a PRIVATE application.
+- There must be NO public access.
+- Without authentication, NO user should be able to see events, photos, videos, or downloads.
+- Without admin approval, a user must NOT be able to access any part of the system.
+
+AUTHENTICATION & AUTHORIZATION:
+1. Admin Authentication:
+   - Create a single admin account using environment variables (ADMIN_EMAIL, ADMIN_PASSWORD).
+   - Admin must log in to manage the platform.
+
+2. User Access Control:
+   - Users cannot freely self-register.
+   - Admin creates user accounts OR approves pending users.
+   - Only admin-approved users can log in.
+   - Unapproved users must see "Access Denied – Not Authorized".
+
+FUNCTIONAL REQUIREMENTS:
+
+1. Admin Features:
+   - Create, update, and delete upcoming events (title, description, date).
+   - Upload photos and videos FOR A SPECIFIC EVENT.
+   - View all users and approve or block them.
+   - Delete events or media related to an event.
+
+2. Authorized User Features:
+   - Log in only after admin approval.
+   - View list of upcoming events.
+   - Click on an event to open its dedicated gallery page.
+   - View ONLY photos and videos related to the selected event.
+   - Upload photos/videos to a selected event.
+   - Download photos and videos from that event gallery.
+
+3. Event-wise Media Organization (VERY IMPORTANT):
+   - Each event must have its own media gallery.
+   - Media must be linked to events using event IDs.
+   - Users should NOT see mixed photos from other events.
+   - Event list page → Event details → Event gallery flow.
+
+4. Unauthorized Behavior:
+   - If not logged in → redirect to login page.
+   - If logged in but not approved → show access denied page.
+   - Protect all backend APIs using authentication and authorization middleware.
+
+TECH STACK:
+- Frontend: HTML, CSS, JavaScript
+- Backend: Node.js with Express
+- Database (DBaaS): MongoDB Atlas
+- Storage as a Service: Cloud storage for photos/videos (Firebase Storage or equivalent)
+- Security as a Service:
+   - Authentication
+   - Authorization
+   - Role-Based Access Control (Admin/User)
+   - Password hashing (bcrypt)
+   - Environment variables
+   - HTTPS (handled by Replit)
+- Hosting (PaaS): Replit public cloud platform
+
+PROJECT STRUCTURE:
+- /public (HTML, CSS, JS)
+- /routes
+- /models (User, Event, Media)
+- /controllers
+- /middleware (auth check, role check)
+- server.js
+
+CLOUD CONCEPT MAPPING (ADD COMMENTS IN CODE):
+- IaaS: Cloud VM/container running the backend
+- PaaS: Replit hosting platform
+- DBaaS: MongoDB Atlas
+- Storage as a Service: Event-wise cloud media storage
+- Security as a Service: Authentication, authorization, RBAC, HTTPS
+
+NON-FUNCTIONAL REQUIREMENTS:
+- Clean and simple UI
+- Event-wise navigation to reduce user browsing
+- Proper error handling and validation
+- Use environment variables for secrets
+- Well-commented code explaining cloud service usage
+
+OUTPUT:
+- Generate complete runnable code
+- Provide steps to run the application on Replit
+- Explain how to configure environment variables

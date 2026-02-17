@@ -1,0 +1,79 @@
+Build a full-stack web application called "Cloud-Based Event & Media Sharing Platform".
+
+IMPORTANT SECURITY RULE:
+- This is a PRIVATE application.
+- There must be NO public access.
+- Without authentication, NO user should be able to see events, photos, videos, or downloads.
+- Without admin approval, a user must NOT be able to access any part of the system.
+
+AUTHENTICATION & AUTHORIZATION:
+1. Admin Authentication:
+   - Create a single admin account using environment variables (ADMIN_EMAIL, ADMIN_PASSWORD).
+   - Admin must log in to manage the platform.
+
+2. User Access Control:
+   - Users cannot freely self-register.
+   - Admin creates user accounts OR approves pending users.
+   - Only admin-approved users can log in.
+   - Unapproved users must see "Access Denied – Not Authorized".
+
+FUNCTIONAL REQUIREMENTS:
+
+1. Admin Features:
+   - Create, update, and delete upcoming events (title, description, date).
+   - Upload photos and videos for any event.
+   - View all users and approve or block them.
+   - Delete events or uploaded media.
+
+2. Authorized User Features:
+   - Log in only after admin approval.
+   - View list of upcoming events.
+   - View single event details.
+   - View event photo/video gallery.
+   - Upload photos/videos to existing events.
+   - Download event photos and videos.
+
+3. Unauthorized Behavior:
+   - If not logged in → redirect to login page.
+   - If logged in but not approved → show access denied page.
+   - Protect all backend APIs using authentication and authorization middleware.
+
+TECH STACK:
+- Frontend: HTML, CSS, JavaScript
+- Backend: Node.js with Express
+- Database (DBaaS): MongoDB Atlas
+- Storage as a Service: Cloud storage for photos/videos (Firebase Storage or equivalent)
+- Security as a Service:
+   - Authentication
+   - Authorization
+   - Role-Based Access Control (Admin/User)
+   - Password hashing (bcrypt)
+   - Environment variables
+   - HTTPS (handled by Replit)
+- Hosting (PaaS): Replit public cloud platform
+
+PROJECT STRUCTURE:
+- /public (HTML, CSS, JS)
+- /routes
+- /models
+- /controllers
+- /middleware (auth check, role check)
+- server.js
+
+CLOUD CONCEPT MAPPING (ADD COMMENTS IN CODE):
+- IaaS: Cloud VM/container running the backend
+- PaaS: Replit hosting platform
+- DBaaS: MongoDB Atlas
+- Storage as a Service: Cloud-based media storage
+- Security as a Service: Authentication, authorization, RBAC, HTTPS
+
+NON-FUNCTIONAL REQUIREMENTS:
+- Clean and simple UI
+- Proper error handling and validation
+- Use environment variables for secrets
+- Well-commented code explaining cloud service usage
+
+OUTPUT:
+- Generate complete runnable code
+- Provide steps to run the application on Replit
+- Explain how to configure environment variables

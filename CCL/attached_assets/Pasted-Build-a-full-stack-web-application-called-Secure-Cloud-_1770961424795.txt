@@ -1,0 +1,158 @@
+Build a full-stack web application called:
+
+"Secure Cloud-Based Event Media Management System"
+
+==================================================
+STRICT SECURITY REQUIREMENTS
+==================================================
+
+1. This is a PRIVATE application.
+2. No public access to events, media, or users.
+3. All pages and APIs must require authentication middleware.
+4. When a user clicks Logout:
+   - Destroy server session or invalidate JWT.
+   - Clear authentication cookies/tokens.
+   - Redirect immediately to Login page.
+   - Disable caching of protected pages.
+   - Prevent access to protected pages using browser back button.
+   - Any attempt to access protected routes after logout must redirect to Login page.
+5. Return proper status codes:
+   - 401 Unauthorized
+   - 403 Forbidden
+
+==================================================
+LOGIN FLOW CONTROL (IMPORTANT – FIX NEW USER LOGIN ISSUE)
+==================================================
+
+When a user attempts to login:
+
+Step 1: Check if email exists.
+   - If not → Show "Invalid email or password."
+
+Step 2: Compare password using bcrypt.
+   - If incorrect → Show "Invalid email or password."
+
+Step 3: If credentials are correct:
+   - Check if user.approved == true
+
+      IF approved == false:
+         - Do NOT create session or JWT.
+         - Do NOT redirect to dashboard.
+         - Show message:
+           "Your account is pending admin approval."
+
+      IF approved == true:
+         - Create session or generate JWT.
+         - Redirect to dashboard.
+
+Important:
+- Never show raw system/database errors.
+- Never create login session for unapproved users.
+- Handle login gracefully without crashing.
+
+==================================================
+ADMIN HIERARCHY SYSTEM (ROLE-BASED PRIORITY)
+==================================================
+
+There must be three roles:
+
+- Super Admin (Highest Authority)
+- Co-Admin (Secondary Admin)
+- User (Normal User)
+
+--------------------------------------------------
+SUPER ADMIN (Permanent & Highest Priority)
+--------------------------------------------------
+
+1. There must be ONLY ONE Super Admin.
+2. Store Super Admin credentials in environment variables:
+   - SUPER_ADMIN_EMAIL
+   - SUPER_ADMIN_PASSWORD
+3. On server startup:
+   - Check if Super Admin exists.
+   - If not, automatically create it using env credentials.
+4. Super Admin cannot be deleted.
+5. Super Admin cannot be demoted.
+6. Users cannot register as Super Admin.
+
+Super Admin can:
+- Approve or block users
+- Promote a user to Co-Admin
+- Demote Co-Admin to User
+- Create, update, delete events
+- Upload and delete event media
+- Send system-wide announcements
+- View system activity
+
+--------------------------------------------------
+CO-ADMIN (Delegated Authority)
+--------------------------------------------------
+
+Co-Admin can:
+- Approve or block normal users
+- Create and manage events
+- Upload media to events
+- Send event-related announcements
+
+Co-Admin CANNOT:
+- Modify or delete Super Admin
+- Promote anyone to Super Admin
+- Modify role hierarchy
+- Delete Super Admin
+- Remove another Co-Admin without Super Admin approval
+
+--------------------------------------------------
+USER (Normal User)
+--------------------------------------------------
+
+1. Users can register normally.
+2. Default registration values:
+   - role = "user"
+   - approved = false
+3. Only Super Admin or Co-Admin can approve users.
+4. If not approved:
+   - Show: "Access Denied – Awaiting Admin Approval"
+
+==================================================
+ROLE SECURITY RULES
+==================================================
+
+1. Role field must never be editable via public API.
+2. Role changes must happen only through protected admin routes.
+3. Enforce hierarchy:
+   Super Admin > Co-Admin > User
+4. Use middleware to validate role before sensitive actions.
+5. Return 403 Forbidden for unauthorized role attempts.
+
+==================================================
+FUNCTIONAL REQUIREMENTS
+==================================================
+
+ADMIN FEATURES:
+- Manage users
+- Approve/block users
+- Create upcoming events
+- Edit event details
+- Delete events
+- Upload photos/videos to specific events
+- Delete event media
+
+--------------------------------------------------
+AUTHORIZED USER FEATURES
+--------------------------------------------------
+
+- Login only after approval
+- View list of upcoming events
+- Click event → Open dedicated Event Gallery page
+- See ONLY photos/videos related to that event
+- Upload media to selected event (if allowed)
+
+==================================================
+EVENT-WISE MEDIA ORGANIZATION
+==================================================
+
+1. Media must be linked using eventId.
+2. Each event must have its own gallery page.
+3. No mixing of media between events.
+4. Navigation flow:
+   Event List → Event Details → Event...

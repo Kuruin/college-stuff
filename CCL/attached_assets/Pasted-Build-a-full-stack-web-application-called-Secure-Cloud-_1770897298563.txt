@@ -1,0 +1,249 @@
+Build a full-stack web application called:
+
+"Secure Cloud-Based Event Media Management System"
+
+==================================================
+STRICT SECURITY REQUIREMENTS
+==================================================
+
+1. This is a PRIVATE application.
+2. No public access to events, media, or users.
+3. All pages and APIs must require authentication.
+4. After logout:
+   - Destroy session or invalidate JWT.
+   - Redirect to login page immediately.
+   - Prevent access to protected pages using browser back button.
+5. Use secure authentication middleware.
+6. Return 401 Unauthorized or 403 Forbidden where required.
+
+==================================================
+ADMIN HIERARCHY SYSTEM (ROLE-BASED PRIORITY)
+==================================================
+
+There must be THREE roles:
+
+- Super Admin (Highest Authority)
+- Co-Admin (Secondary Admin)
+- User (Normal User)
+
+--------------------------------------------------
+SUPER ADMIN (Primary & Permanent)
+--------------------------------------------------
+
+1. There must be ONLY ONE Super Admin.
+2. Super Admin credentials must be stored in environment variables:
+   - SUPER_ADMIN_EMAIL
+   - SUPER_ADMIN_PASSWORD
+3. On server startup:
+   - Check if Super Admin exists.
+   - If not, create Super Admin automatically using env credentials.
+4. Super Admin cannot be deleted.
+5. Super Admin cannot be demoted.
+6. No user can register as Super Admin.
+
+Super Admin can:
+- Approve or block users
+- Promote a user to Co-Admin
+- Demote a Co-Admin back to User
+- Create, update, delete events
+- Upload and delete event media
+- Send system-wide announcements/messages
+- View all users and activity logs
+
+--------------------------------------------------
+CO-ADMIN (Delegated Authority)
+--------------------------------------------------
+
+Co-Admin can:
+- Approve or block normal users
+- Create and manage events
+- Upload media to events
+- Send event-related messages
+
+Co-Admin CANNOT:
+- Modify or delete Super Admin
+- Promote another user to Super Admin
+- Delete Super Admin
+- Modify role hierarchy
+- Remove another Co-Admin created by Super Admin without Super Admin approval
+
+--------------------------------------------------
+USER (Normal User)
+--------------------------------------------------
+
+1. Users can register normally.
+2. Default registration values:
+   - role = "user"
+   - approved = false
+3. Only Super Admin or Co-Admin can approve users.
+4. If not approved:
+   - Show message: "Access Denied – Awaiting Admin Approval"
+
+==================================================
+ROLE SECURITY RULES
+==================================================
+
+1. Role field must never be editable via public API.
+2. Role changes must only occur through protected admin routes.
+3. Enforce hierarchy:
+   Super Admin > Co-Admin > User
+4. Use middleware for role validation.
+5. Return 403 Forbidden for unauthorized role actions.
+
+==================================================
+FUNCTIONAL REQUIREMENTS
+==================================================
+
+ADMIN FEATURES (Super Admin + Co-Admin depending on permission):
+
+- Manage users
+- Approve or block users
+- Create upcoming events
+- Edit event details
+- Delete events
+- Upload photos/videos for specific events
+- Delete event media
+
+--------------------------------------------------
+AUTHORIZED USER FEATURES
+--------------------------------------------------
+
+- Login only after approval
+- View list of upcoming events
+- Click event → Open dedicated Event Gallery page
+- See ONLY photos/videos of that selected event
+- Upload media to that event (if allowed)
+- View photo in full-screen preview mode
+- Download photo/video using Download button
+- React to photos (Like or Emoji)
+- See total reaction count on each photo
+
+==================================================
+EVENT-WISE MEDIA ORGANIZATION
+==================================================
+
+1. Media must be linked using eventId.
+2. Each event must have a dedicated gallery page.
+3. No mixing of media between events.
+4. Flow:
+   Event List → Event Details → Event Gallery
+
+==================================================
+PHOTO INTERACTION SYSTEM
+==================================================
+
+Each photo must have:
+
+- View Button (opens preview modal/full page)
+- Download Button
+- React Button (like/emoji)
+- Display total reaction count
+
+Database must store reactions with:
+- mediaId
+- userId
+- reactionType
+
+(Optional improvement: prevent duplicate reactions per user)
+
+==================================================
+UNAUTHORIZED ACCESS RULES
+==================================================
+
+- Not logged in → Redirect to login page
+- Logged in but not approved → Access denied message
+- Non-admin accessing admin routes → 403 Forbidden
+- Protect all backend APIs with authentication middleware
+
+==================================================
+TECH STACK
+==================================================
+
+Frontend:
+- HTML, CSS, JavaScript
+
+Backend:
+- Node.js with Express
+
+Database (DBaaS):
+- MongoDB Atlas
+
+Storage as a Service:
+- Firebase Storage or other cloud storage for media
+
+Security as a Service:
+- Authentication
+- Role-Based Access Control (RBAC)
+- Password hashing using bcrypt
+- Secure session management or JWT
+- Environment variables
+- HTTPS
+
+Hosting (PaaS):
+- Deploy on public cloud platform
+
+Infrastructure (IaaS):
+- Application runs on cloud virtual infrastructure
+
+==================================================
+DATABASE MODELS
+==================================================
+
+User:
+- name
+- email
+- password (hashed)
+- role (super-admin / co-admin / user)
+- approved (true/false)
+
+Event:
+- title
+- description
+- date
+
+Media:
+- eventId (reference to Event)
+- fileUrl
+- uploadedBy
+
+Reaction:
+- mediaId
+- userId
+- reactionType
+
+==================================================
+PROJECT STRUCTURE
+==================================================
+
+- /public
+- /routes
+- /models
+- /controllers
+- /middleware
+- server.js
+
+==================================================
+NON-FUNCTIONAL REQUIREMENTS
+==================================================
+
+- Clean UI
+- Proper validation
+- Error handling
+- Secure API design
+- Use environment variables for secrets
+- Add comments explaining:
+   - IaaS
+   - PaaS
+   - DBaaS
+   - Storage as a Service
+   - Security as a Service
+
+==================================================
+OUTPUT REQUIREMENTS
+==================================================
+
+- Generate complete runnable project code.
+- Provide environment variable setup instructions.
+- Provide MongoDB connection setup steps.
+- Ensure secure logout and back-button prevention.
+- Ensure strict role hierarchy is enforced.

@@ -1,0 +1,180 @@
+Use the below structured prompt in your AI/code generator (Gemini / Copilot / ChatGPT) to fix your project properly 👇
+
+✅ PROMPT TO FIX EVENT DETAIL + AUTH FLOW
+
+Build and fix the Event Detail page in my private authenticated web application with the following strict requirements:
+
+1️⃣ Event Detail Page Fix
+Problem:
+
+When clicking on an event, it shows "Event Not Found" even though the event exists.
+
+Required Fix:
+
+Ensure the event ID is correctly passed in the route.
+
+Fetch event details using the correct ID from the database.
+
+If event exists → display event details.
+
+If event does NOT exist → show proper 404 page (not generic error).
+
+Example:
+
+GET /events/:eventId
+
+
+Backend must:
+
+Validate eventId
+
+Check if event belongs to logged-in user
+
+Return event data
+
+If not found → return 404 JSON response
+
+2️⃣ Add Photo Upload Feature Inside Event
+
+Inside Event Detail page:
+
+Add a section:
+
+📤 Upload Photo
+
+Only logged-in users can upload
+
+Upload should be restricted to:
+
+JPG
+
+PNG
+
+Max 5MB
+
+Store image securely (local storage / cloud storage)
+
+Save file path in database linked to eventId
+
+Use authentication middleware
+
+API example:
+
+POST /events/:eventId/upload
+
+3️⃣ Add View Photos Section
+
+Inside Event Detail page:
+
+📁 View Photos
+
+Display all uploaded images of that event
+
+Show as gallery/grid
+
+Only accessible to authenticated users
+
+Ensure user can only see their own event photos
+
+API:
+
+GET /events/:eventId/photos
+
+4️⃣ Add Download Button
+
+For each image:
+
+Add "Download" button
+
+Should securely download file
+
+Prevent direct public URL access
+
+Use authenticated route
+
+Example:
+
+GET /events/:eventId/photos/:photoId/download
+
+
+Must:
+
+Validate ownership
+
+Stream file securely
+
+Set correct headers
+
+5️⃣ Fix Logout / Sign Out Behavior
+Required Behavior:
+
+When user clicks Logout:
+
+Destroy session OR invalidate JWT
+
+Clear auth cookies/token
+
+Redirect immediately to /login
+
+Prevent access to protected routes
+
+If user presses back button → should NOT see protected pages
+
+Example:
+
+Add middleware to check authentication
+
+If not authenticated → redirect to login
+
+6️⃣ Security Requirements (MANDATORY)
+
+All event routes must require authentication middleware
+
+No public access to:
+
+Events
+
+Photos
+
+Downloads
+
+Disable caching of protected pages
+
+Use proper error handling
+
+Prevent IDOR (Insecure Direct Object Reference)
+
+7️⃣ Frontend Behavior
+
+Event Detail Page Layout:
+
+Event Title
+
+Event Description
+
+Upload Photo Section
+
+Photo Gallery Section
+
+Download Button on each image
+
+Logout Button
+
+If user session expires:
+→ Automatically redirect to Login page
+
+Generate:
+
+Backend routes
+
+Middleware
+
+Controller logic
+
+Frontend UI code
+
+Proper error handling
+
+Secure file upload handling
+
+The application must be PRIVATE and fully authenticated.
