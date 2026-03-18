@@ -1,68 +1,36 @@
 package com.example.myapplication
 
-import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
-
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            // Permission is granted. Continue the action or workflow in your app.
-        } else {
-            // Explain to the user that the feature is unavailable because the
-            // features requires a permission that the user has denied. At the
-            // same time, respect the user's decision. Don't link to system
-            // settings in an effort to convince the user to change their
-            // decision.
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
         setContent {
             MyApplicationTheme {
-                NotificationScreen()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    TaskScreen()
+                }
             }
         }
     }
@@ -70,53 +38,125 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationScreen() {
-    var text by remember { mutableStateOf("") }
-    val context = LocalContext.current
+fun TaskScreen(viewModel: TaskViewModel = viewModel()) {
+    var newTaskTitle by remember { mutableStateOf("") }
+    val tasks by viewModel.allTasks.collectAsState(initial = emptyList())
+    val auditLog by viewModel.auditLog.collectAsState(initial = emptyList())
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Room SQLite Database Demo",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Input Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Notification Message") }
+                value = newTaskTitle,
+                onValueChange = { newTaskTitle = it },
+                label = { Text("New Record Title") },
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { showNotification(context, text) }) {
-                Text("Show Notification")
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = {
+                if (newTaskTitle.isNotBlank()) {
+                    viewModel.addTask(newTaskTitle)
+                    newTaskTitle = ""
+                }
+            }) {
+                Text("Insert")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Data Table Section
+        Text("Table: tasks", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Box(modifier = Modifier.weight(1f)) {
+            LazyColumn {
+                items(tasks) { task ->
+                    TaskItem(
+                        task = task,
+                        onCheckedChange = { viewModel.toggleTaskCompletion(task) },
+                        onDelete = { viewModel.deleteTask(task) }
+                    )
+                }
+            }
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+        // Live Database Audit Log Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Live Audit Log (Table: audit_log)", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+            TextButton(onClick = { viewModel.clearAuditLog() }) {
+                Text("Clear Log", fontSize = 12.sp)
+            }
+        }
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.8f)
+                .background(Color.Black.copy(alpha = 0.05f))
+                .padding(8.dp)
+        ) {
+            LazyColumn {
+                items(auditLog) { entry ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "[${entry.getFormattedTime()}] ",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                        Text(
+                            entry.action,
+                            fontSize = 11.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-fun showNotification(context: Context, message: String) {
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    val channelId = "default_channel"
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val channel = NotificationChannel(channelId, "Default", NotificationManager.IMPORTANCE_DEFAULT)
-        notificationManager.createNotificationChannel(channel)
-    }
-
-    val notification = NotificationCompat.Builder(context, channelId)
-        .setContentTitle("New Notification")
-        .setContentText(message)
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .build()
-
-    notificationManager.notify(1, notification)
-}
-
-@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    MyApplicationTheme {
-        NotificationScreen()
+fun TaskItem(
+    task: Task,
+    onCheckedChange: (Boolean) -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = task.isCompleted,
+            onCheckedChange = onCheckedChange
+        )
+        Text(
+            text = task.title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete Task")
+        }
     }
 }
