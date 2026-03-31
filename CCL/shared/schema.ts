@@ -22,6 +22,7 @@ export const events = pgTable("events", {
   description: text("description").notNull(),
   date: timestamp("date").notNull(),
   location: text("location").notNull(),
+  imageUrl: text("image_url"),
   createdById: integer("created_by_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -88,18 +89,21 @@ export const reactionsRelations = relations(reactions, ({ one }) => ({
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
 });
 
-export const insertEventSchema = createInsertSchema(events).omit({ 
-  id: true, 
-  createdById: true, 
-  createdAt: true 
+export const insertEventSchema = createInsertSchema(events).omit({
+  id: true,
+  createdById: true,
+  createdAt: true
+}).extend({
+  date: z.coerce.date()
 });
 
-export const insertMediaSchema = createInsertSchema(media).omit({ 
-  id: true, 
-  uploadedById: true, 
-  createdAt: true 
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  uploadedById: true,
+  createdAt: true
 });
 
 export const insertReactionSchema = createInsertSchema(reactions).omit({

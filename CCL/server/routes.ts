@@ -106,7 +106,6 @@ export async function registerRoutes(
       const user = await storage.createUser({
         ...input,
         password: hashedPassword,
-        role: 'user',
         isApproved: false
       });
 
@@ -125,8 +124,8 @@ export async function registerRoutes(
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid email or password." });
 
-      // Check approval status for non-admin users
-      if (user.role === 'user' && !user.isApproved) {
+      // Check approval status for all users except super-admin
+      if (!user.isApproved && user.role !== 'super-admin') {
         return res.status(403).json({ message: "Your account is pending admin approval." });
       }
 
@@ -192,11 +191,14 @@ export async function registerRoutes(
     res.json(events);
   });
 
-  app.post(api.events.create.path, ensureAdmin, async (req, res) => {
+  app.post(api.events.create.path, ensureAdmin, upload.single('backgroundImage'), async (req, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
+      const imageUrl = req.file?.path || null;
+
       const event = await storage.createEvent({
         ...input,
+        imageUrl,
         createdById: (req.user as any).id
       });
       res.status(201).json(event);

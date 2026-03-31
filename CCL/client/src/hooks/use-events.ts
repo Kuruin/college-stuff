@@ -17,14 +17,12 @@ export function useEvents() {
   });
 
   const createEventMutation = useMutation({
-    mutationFn: async (data: InsertEvent) => {
-      // Ensure date is a string/ISO for transport, though Zod handles coerces if set up
-      // Schema expects Date object, JSON stringifies it.
-      // We rely on backend to parse it correctly.
+    mutationFn: async (data: any) => {
+      const isFormData = data instanceof FormData;
       const res = await fetch(api.events.create.path, {
         method: api.events.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: isFormData ? undefined : { "Content-Type": "application/json" },
+        body: isFormData ? data : JSON.stringify(data),
       });
 
       if (!res.ok) throw new Error("Failed to create event");

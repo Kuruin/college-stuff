@@ -41,8 +41,9 @@ import { useState } from "react";
 
 function CreateEventDialog() {
   const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const { createEvent } = useEvents();
-  
+
   // Extend schema to handle date input as string initially
   const formSchema = insertEventSchema.extend({
     date: z.string(), // Input type="date" returns string
@@ -60,13 +61,23 @@ function CreateEventDialog() {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      // API expects Date object or ISO string for the timestamp field
-      await createEvent.mutateAsync({
-        ...data,
-        date: new Date(data.date), 
-      });
+      if (file) {
+        const formData = new FormData();
+        formData.append("title", data.title);
+        formData.append("description", data.description);
+        formData.append("date", data.date);
+        formData.append("location", data.location);
+        formData.append("backgroundImage", file);
+        await createEvent.mutateAsync(formData);
+      } else {
+        await createEvent.mutateAsync({
+          ...data,
+          date: new Date(data.date),
+        });
+      }
       setOpen(false);
       form.reset();
+      setFile(null);
     } catch (e) {
       console.error(e);
     }
@@ -143,6 +154,16 @@ function CreateEventDialog() {
                 )}
               />
             </div>
+            <FormItem>
+              <FormLabel>Background Image (Optional)</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+              </FormControl>
+            </FormItem>
             <Button type="submit" className="w-full" disabled={createEvent.isPending}>
               {createEvent.isPending ? "Creating..." : "Create Event"}
             </Button>
@@ -180,8 +201,8 @@ export default function EventsList() {
           <h1 className="text-3xl font-bold font-display text-slate-900">Discover Events</h1>
           <p className="text-muted-foreground mt-1">Explore upcoming events or create your own.</p>
         </div>
-        
-        {user?.role === 'admin' && <CreateEventDialog />}
+
+        {user && ['admin', 'super-admin', 'co-admin'].includes(user.role) && <CreateEventDialog />}
       </div>
 
       {!events || events.length === 0 ? (
@@ -198,16 +219,22 @@ export default function EventsList() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
             <Card key={event.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-slate-200 hover:border-primary/20">
-              <div className="h-32 bg-gradient-to-br from-primary/80 to-accent/80 p-6 flex items-end relative overflow-hidden">
+              <div
+                className={`h-32 p-6 flex items-end relative overflow-hidden bg-cover bg-center ${!event.imageUrl ? 'bg-gradient-to-br from-primary/80 to-accent/80' : ''}`}
+                style={event.imageUrl ? { backgroundImage: `url(${event.imageUrl})` } : undefined}
+              >
                 {/* Decorative circles */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-xl transform -translate-x-10 translate-y-10" />
-                
+
+                {/* Dark overlay for contrast if image exists */}
+                {event.imageUrl && <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />}
+
                 <Badge variant="secondary" className="bg-white/90 text-slate-900 shadow-sm backdrop-blur-sm relative z-10">
                   {format(new Date(event.date), "MMM d, yyyy")}
                 </Badge>
               </div>
-              
+
               <CardContent className="p-6">
                 <div className="mb-4">
                   <h3 className="text-xl font-bold font-display text-slate-900 line-clamp-1 mb-2 group-hover:text-primary transition-colors">
@@ -217,7 +244,7 @@ export default function EventsList() {
                     {event.description}
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-6">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-primary/70" />
@@ -236,7 +263,7 @@ export default function EventsList() {
                     </Button>
                   </Link>
 
-                  {user?.role === 'admin' && (
+                  {user && ['admin', 'super-admin', 'co-admin'].includes(user.role) && (
                     <Button
                       variant="ghost"
                       size="icon"
