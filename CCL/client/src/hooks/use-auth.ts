@@ -12,6 +12,7 @@ export function useAuth() {
     queryFn: async () => {
       const res = await fetch(api.auth.me.path);
       if (res.status === 401) return null;
+      if (res.status === 403) return { isApproved: false, _isUnapprovedSession: true } as any;
       if (!res.ok) throw new Error("Failed to fetch user");
       return api.auth.me.responses[200].parse(await res.json());
     },
@@ -51,8 +52,8 @@ export function useAuth() {
 
       if (!res.ok) {
         if (res.status === 400) {
-            const error = await res.json();
-            throw new Error(error.message || "Registration failed");
+          const error = await res.json();
+          throw new Error(error.message || "Registration failed");
         }
         throw new Error("Registration failed");
       }

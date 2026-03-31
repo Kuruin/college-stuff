@@ -145,6 +145,11 @@ export async function registerRoutes(
 
   app.get(api.auth.me.path, (req, res) => {
     if (req.isAuthenticated()) {
+      const user = req.user as any;
+      // If user is not approved (and not super-admin), return 403
+      if (!user.isApproved && user.role !== 'super-admin') {
+        return res.status(403).json({ message: "Account pending approval" });
+      }
       res.json(req.user);
     } else {
       res.status(401).json({ message: "Not authenticated" });

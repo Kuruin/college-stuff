@@ -14,7 +14,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
 
-  const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
+  const getInitials = (name?: string) => {
+    if (!name) return "??";
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -32,7 +35,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex items-center gap-4">
-            {user ? (
+            {user && !(user as any)._isUnapprovedSession ? (
               <div className="flex items-center gap-4">
                 <Link href="/">
                   <Button variant={location === "/" ? "secondary" : "ghost"} size="sm" className="gap-2">
@@ -40,7 +43,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     Events
                   </Button>
                 </Link>
-                
+
+                {user && (user.role === "admin" || user.role === "super-admin") && (
+                  <Link href="/admin">
+                    <Button variant={location === "/admin" ? "secondary" : "ghost"} size="sm" className="gap-2">
+                      <User className="w-4 h-4" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">

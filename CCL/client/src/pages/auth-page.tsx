@@ -23,14 +23,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Cloud, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export default function AuthPage() {
+export default function AuthPage({ forcePendingMessage }: { forcePendingMessage?: boolean }) {
   const [, setLocation] = useLocation();
   const { user, login, register } = useAuth();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in and approved
   useEffect(() => {
-    if (user) setLocation("/");
+    if (user && !(user as any)._isUnapprovedSession) setLocation("/");
   }, [user, setLocation]);
 
   const loginForm = useForm<Pick<InsertUser, "username" | "password">>({
@@ -65,7 +65,7 @@ export default function AuthPage() {
         {/* Abstract Background Shapes */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-        
+
         {/* Content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
@@ -74,13 +74,13 @@ export default function AuthPage() {
             </div>
             <span className="text-2xl font-bold font-display tracking-tight">CloudEvents</span>
           </div>
-          
+
           <h1 className="text-5xl font-bold font-display leading-tight mb-6">
             Capture moments,<br />
             Share memories.
           </h1>
           <p className="text-lg text-slate-300 max-w-md leading-relaxed">
-            The simplest way to organize events and collect photos from everyone. 
+            The simplest way to organize events and collect photos from everyone.
             Secure, fast, and built for the cloud.
           </p>
         </div>
@@ -106,7 +106,19 @@ export default function AuthPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
             <h2 className="text-2xl font-bold font-display tracking-tight text-slate-900">Welcome back</h2>
-            <p className="text-muted-foreground mt-2">Enter your details to access your account.</p>
+            {forcePendingMessage || (user as any)?._isUnapprovedSession ? (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm animate-in fade-in slide-in-from-top-1">
+                <p className="font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Account Pending Approval
+                </p>
+                <p className="mt-1 opacity-90">
+                  Your account has been restricted. Please contact an administrator for access.
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground mt-2">Enter your details to access your account.</p>
+            )}
           </div>
 
           <Tabs defaultValue="login" className="w-full">
@@ -114,7 +126,7 @@ export default function AuthPage() {
               <TabsTrigger value="login" className="text-base">Login</TabsTrigger>
               <TabsTrigger value="register" className="text-base">Register</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <Card className="border-0 shadow-none">
                 <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -132,7 +144,7 @@ export default function AuthPage() {
                 </form>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="register">
               <Card className="border-0 shadow-none">
                 <Form {...registerForm}>
