@@ -9,6 +9,8 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import passport from "passport";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
 
 /*
  * === CLOUD SERVICE MODELS EXPLAINED ===
@@ -39,21 +41,26 @@ import passport from "passport";
  *    - Here, we use library-based security (bcrypt/scrypt) to handle "Security" logic.
  */
 
-// --- Cloud Storage Simulation ---
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-  })
+// --- Cloud Storage Integration ---
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const storageOptions = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Determine if video or image to set resource_type
+    const resourceType = file.mimetype.startsWith('video/') ? 'video' : 'auto';
+    return {
+      folder: 'events_media',
+      resource_type: resourceType,
+    };
+  },
+});
+
+const upload = multer({ storage: storageOptions });
 
 // Middleware to ensure user is authenticated and approved
 const ensureAuthorized = (req: any, res: any, next: any) => {
@@ -86,8 +93,6 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupAuth(app);
 
-  app.use('/uploads', ensureAuthorized, express.static(uploadDir));
-
   // Auth Routes
   app.post(api.auth.register.path, async (req, res) => {
     try {
@@ -96,7 +101,7 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Username already exists" });
       }
-      
+
       const hashedPassword = await hashPassword(input.password);
       const user = await storage.createUser({
         ...input,
@@ -104,7 +109,7 @@ export async function registerRoutes(
         role: 'user',
         isApproved: false
       });
-      
+
       res.status(201).json(user);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -119,7 +124,7 @@ export async function registerRoutes(
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid email or password." });
-      
+
       // Check approval status for non-admin users
       if (user.role === 'user' && !user.isApproved) {
         return res.status(403).json({ message: "Your account is pending admin approval." });
@@ -166,7 +171,7 @@ export async function registerRoutes(
     const targetUser = await storage.getUser(id);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
     if (targetUser.role === 'super-admin') return res.status(403).json({ message: "Cannot modify Super Admin" });
-    
+
     const user = await storage.updateUserRole(id, role);
     res.json(user);
   });
@@ -176,7 +181,7 @@ export async function registerRoutes(
     const targetUser = await storage.getUser(id);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
     if (targetUser.role === 'super-admin') return res.status(403).json({ message: "Cannot delete Super Admin" });
-    
+
     await storage.deleteUser(id);
     res.sendStatus(204);
   });
@@ -226,7 +231,8 @@ export async function registerRoutes(
   app.post(api.media.upload.path, ensureAuthorized, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const cloudUrl = `/uploads/${req.file.filename}`;
+    // Cloudinary automatically provides the uploaded file URL in req.file.path
+    const cloudUrl = req.file.path;
     const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
 
     try {
@@ -271,7 +277,7 @@ export async function registerRoutes(
 async function seedDatabase() {
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.com';
   const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'superadmin123';
-  
+
   const superAdmin = await storage.getUserByUsername(superAdminEmail);
   if (!superAdmin) {
     const password = await hashPassword(superAdminPassword);
