@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertEvent } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import { type InsertEvent } from "@shared/schema";
 import { useToast } from "./use-toast";
 
 export function useEvents() {
@@ -96,6 +97,26 @@ export function useUploadMedia() {
     },
     onError: (error) => {
       toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteMedia() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: number; eventId: number }) => {
+      const url = buildUrl(api.media.delete.path, { id });
+      const res = await fetch(url, { method: api.media.delete.method });
+      if (!res.ok) throw new Error("Failed to delete media");
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.events.get.path, variables.eventId] });
+      toast({ title: "Success", description: "Media deleted" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 }

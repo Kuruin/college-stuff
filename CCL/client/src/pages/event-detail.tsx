@@ -1,4 +1,4 @@
-import { useEvent, useUploadMedia } from "@/hooks/use-events";
+import { useEvent, useUploadMedia, useDeleteMedia } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { useRoute } from "wouter";
 import { format } from "date-fns";
@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, User, Upload, Image as ImageIcon, Download, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, User, Upload, Image as ImageIcon, Download, ArrowLeft, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function EventDetail() {
@@ -18,7 +18,9 @@ export default function EventDetail() {
   const eventId = parseInt(params?.id || "0");
   const { data: event, isLoading } = useEvent(eventId);
   const { user } = useAuth();
+  const ObjectUrlStore = useRef<{ [key: string]: string }>({}); // keep track of obj urls to clean up
   const uploadMedia = useUploadMedia();
+  const deleteMedia = useDeleteMedia();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,9 +28,28 @@ export default function EventDetail() {
       const formData = new FormData();
       formData.append("file", e.target.files[0]);
       uploadMedia.mutate({ eventId, formData });
-      
+
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent, url: string, filename: string) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed", error);
+      window.open(url, '_blank');
     }
   };
 
@@ -62,7 +83,7 @@ export default function EventDetail() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-accent/90 mix-blend-multiply opacity-90" />
         {/* Abstract background pattern */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&auto=format&fit=crop')] bg-cover bg-center opacity-40 grayscale" />
-        
+
         <div className="relative z-10 p-8 md:p-12 lg:p-16">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div className="space-y-4 max-w-2xl">
@@ -83,12 +104,12 @@ export default function EventDetail() {
                 </div>
               </div>
             </div>
-            
+
             {user && (
               <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 min-w-[200px]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Actions</h3>
                 <div className="space-y-2">
-                  <Button 
+                  <Button
                     className="w-full bg-white text-primary hover:bg-white/90 shadow-lg font-semibold"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadMedia.isPending}
@@ -127,7 +148,7 @@ export default function EventDetail() {
               </p>
             </CardContent>
           </Card>
-          
+
           <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
             <h3 className="font-semibold text-primary mb-2">Cloud Storage</h3>
             <p className="text-sm text-slate-600">
@@ -155,8 +176,8 @@ export default function EventDetail() {
                 Be the first to share photos or videos from this event.
               </p>
               {user && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="mt-6"
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -169,35 +190,55 @@ export default function EventDetail() {
               {event.media.map((item) => (
                 <div key={item.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 shadow-sm hover:shadow-lg transition-all">
                   {item.type === 'video' ? (
-                    <video 
-                      src={item.url} 
+                    <video
+                      src={item.url}
                       className="w-full h-full object-cover"
-                      controls={false} 
+                      controls={false}
                     />
                   ) : (
-                    <img 
-                      src={item.url} 
-                      alt={item.filename} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                    <img
+                      src={item.url}
+                      alt={item.filename}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   )}
-                  
+
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <a 
-                      href={item.url} 
-                      download={item.filename} 
+                    <a
+                      href={item.url}
+                      download={item.filename}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+                      onClick={(e) => handleDownload(e, item.url, item.filename)}
                     >
-                      <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white text-slate-900 font-medium">
+                      <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white text-slate-900 font-medium z-10 relative">
                         <Download className="w-4 h-4 mr-2" />
                         Download
                       </Button>
                     </a>
                   </div>
-                  
+
+                  {user && (user.role === 'super-admin' || user.role === 'admin' || user.role === 'co-admin') && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-8 w-8 rounded-full shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (confirm("Permanently delete this photo?")) {
+                          deleteMedia.mutate({ id: item.id, eventId });
+                        }
+                      }}
+                      disabled={deleteMedia.isPending}
+                      title="Delete Photo"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+
                   {item.type === 'video' && (
                     <div className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full backdrop-blur-sm">
                       <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
